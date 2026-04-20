@@ -3,6 +3,7 @@
     <head>
         <meta charset = "UTF-8">
         <title>Lobby</title>
+        <link rel="stylesheet" href="/templates/style.css">
         <style>
             body {
                 font-family: sans-serif;
@@ -47,6 +48,12 @@
             <a href="/leaderboard"><button>View Global Leaderboard</button></a>
         </div>
 
+        <div id="challenge-modal" class="hidden" style="margin-top: 20px; padding: 15px; border: 2px solid blue; background-color: #e6f2ff; max-width: 300px;">
+            <p id="challenge-text"></p>
+            <button id="accept-btn">Accept</button>
+            <button id="decline-btn">Decline</button>
+        </div>
+
         <div id = "game-view" class = "hidden">
             <h2 id="turn-indicator"></h2>
             <div class="grid" id="board">
@@ -70,6 +77,9 @@
 
             const ws = new WebSocket(`ws://${window.location.host}/ws/${uid}`);
             let currentRoom = null;
+            let isPlaying = false;
+            let pendingChallenger = null;
+            let myTurn = false;
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
@@ -88,18 +98,24 @@
                     });
                 }
                 else if(data.type === "challenge_received") {
-                    if(confirm(`You received a challenge from ${data.challenger}. Accept?`)) {
-                        ws.send(JSON.stringify({action: "accept_challenge", challenger: data.challenger}));
-                    } 
-                    else {
+                    if (isPlaying) {
                         ws.send(JSON.stringify({action: "decline_challenge", challenger: data.challenger}));
+                        return;
                     }
+                    pendingChallenger = data.challenger;
+                    document.getElementById("challenge-text").textContent = `Challenge from ${pendingChallenger}`;
+                    document.getElementById("challenge-modal").classList.remove("hidden");
+                }
+                else if(data.type === "error") {
+                    document.getElementById("challenge-modal").classList.add("hidden");
                 }
                 else if(data.type === "challenge_declined") {
-                    alert(`${data.target} declined your challenge.`);
+                    document.getElementById("turn-indicator").textContent = `${data.target} declined.`;
                 }
                 else if(data.type === "game_start") {
+                    isPlaying = true;
                     currentRoom = data.room_id;
+                    document.getElementById("challenge-modal").classList.add("hidden");
                     ws.send(JSON.stringify({action: "set_room", room_id: currentRoom}));
                     document.getElementById("lobby-view").classList.add("hidden");
                     document.getElementById("game-view").classList.remove("hidden");
@@ -109,28 +125,44 @@
                     data.board.forEach((val, idx) => {
                         cells[idx].textContent = val;
                     });
-                    document.getElementById("turn-indicator").textContent = data.turn === uid ? "Your Turn" : "Opponent's Turn";
+                    myTurn = data.turn === uid;
+                    document.getElementById("turn-indicator").textContent = myTurn ? "Your Turn" : "Opponent's Turn";
                 } 
                 else if(data.type === "game_over") {
+                    isPlaying = false;
+                    myTurn = false;
+                    let finalMsg = "";
+                    
+                    if(data.winner === "forfeit") {
+                        finalMsg = "Opponent disconnected. You win by forfeit!";
+                    } 
+                    else if(data.winner === "Draw") {
+                        finalMsg = "Game ended in a draw.";
+                    } 
+                    else {
+                        finalMsg = data.winner === uid ? "You Won!" : "You Lost!";
+                    }
+                    
+                    document.getElementById("turn-indicator").textContent = finalMsg;
+                    
                     setTimeout(() => {
-                        if(data.winner === "forfeit") {
-                            alert("Opponent disconnected. You win by forfeit!");
-                        } 
-                        else if(data.winner === "Draw") {
-                            alert("Game ended in a draw.");
-                        } 
-                        else {
-                            const winMsg = data.winner === "X" || data.winner === "O" ? "Match Concluded!" : "";
-                            alert(`Game Over! ${winMsg}`);
-                        }
-
                         location.reload();
-                    }, 100);
+                    }, 3000);
                 }
             };
 
+            document.getElementById("accept-btn").onclick = () => {
+                ws.send(JSON.stringify({action: "accept_challenge", challenger: pendingChallenger}));
+                document.getElementById("challenge-modal").classList.add("hidden");
+            };
+
+            document.getElementById("decline-btn").onclick = () => {
+                ws.send(JSON.stringify({action: "decline_challenge", challenger: pendingChallenger}));
+                document.getElementById("challenge-modal").classList.add("hidden");
+            };
+
             function makeMove(pos) {
-                if(currentRoom && document.getElementById("turn-indicator").textContent === "Your Turn") {
+                if(currentRoom && myTurn) {
                     ws.send(JSON.stringify({action: "move", room_id: currentRoom, position: pos}));
                 }
             }

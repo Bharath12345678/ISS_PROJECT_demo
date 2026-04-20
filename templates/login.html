@@ -33,7 +33,10 @@
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ image: imageData })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(res.status);
+            return res.json();
+        })
         .then(data => {
             const status = document.getElementById("status");
             if (data.success) {
@@ -43,6 +46,9 @@
             } else {
                 status.textContent = "Face not recognized";
             }
+        })
+        .catch(() => {
+            document.getElementById("status").textContent = "Login failed. Please try again.";
         });
     });
 </script>

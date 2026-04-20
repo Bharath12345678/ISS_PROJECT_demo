@@ -3,6 +3,7 @@
     <head>
         <meta charset = "UTF-8">
         <title>Leaderboard</title>
+        <link rel="stylesheet" href="/templates/style.css">
         <style>
             body {
                 font-family: sans-serif;
@@ -46,17 +47,14 @@
 
         <script>
             fetch('/api/leaderboard')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error(response.status);
+                return response.json();
+            })
             .then(data => {
                 const tbody = document.getElementById("leaderboard-body");
                 data.forEach((user, index) => {
                     const tr = document.createElement("tr");
-                    // tr.innerHTML = `
-                    //     <td>${index + 1}</td>
-                    //     <td>${user.uid}</td>
-                    //     <td>${user.name}</td>
-                    //     <td>${user.elo_rating}</td>
-                    // `;
                     [index + 1, user.uid, user.name, user.elo_rating].forEach(val => {
                         const td = document.createElement("td");
                         td.textContent = val;
@@ -65,6 +63,10 @@
                     
                     tbody.appendChild(tr);
                 });
+            })
+            .catch(() => {
+                document.getElementById("leaderboard-body").innerHTML =
+                    '<tr><td colspan="4">Could not load leaderboard. Please try again later.</td></tr>';
             });
         </script>
     </body>
