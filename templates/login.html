@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="/templates/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Face Login</h1>
+    <video id="video" autoplay></video>
+    <br>
+    <button id="capture">Login with Face</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <p id="status"></p>
+</div>
+
+<script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; });
+
+    document.getElementById("capture").addEventListener("click", () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL("image/jpeg");
+
+        fetch("/login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ image: imageData })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const status = document.getElementById("status");
+            if (data.success) {
+                sessionStorage.setItem("uid", data.uid);// Made this change as we were unable to open lobby.html as te frontend never saves the uid to sessionStorage before redirecting, causing to form an infinite login loop
+                status.textContent = "Login successful";
+                window.location.href = "/lobby";
+            } else {
+                status.textContent = "Face not recognized";
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

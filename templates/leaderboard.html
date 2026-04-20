@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset = "UTF-8">
+        <title>Leaderboard</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                padding: 20px;
+            }
+            table { 
+                border-collapse: collapse; 
+                width: 60%; 
+                margin-top: 20px; 
+            }
+            th, td { 
+                border: 1px solid #ddd; 
+                padding: 12px; 
+                text-align: left; 
+            }
+            th { 
+                background-color: #f4f4f4; 
+            }
+            button { 
+                margin-top: 20px; 
+                padding: 10px; 
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Leaderboard</h1>
 
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>UID</th>
+                    <th>Name</th>
+                    <th>Elo Rating</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+
+        <a href="/lobby"><button>Back to Lobby</button></a>
+
+        <script>
+            fetch('/api/leaderboard')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById("leaderboard-body");
+                data.forEach((user, index) => {
+                    const tr = document.createElement("tr");
+                    // tr.innerHTML = `
+                    //     <td>${index + 1}</td>
+                    //     <td>${user.uid}</td>
+                    //     <td>${user.name}</td>
+                    //     <td>${user.elo_rating}</td>
+                    // `;
+                    [index + 1, user.uid, user.name, user.elo_rating].forEach(val => {
+                        const td = document.createElement("td");
+                        td.textContent = val;
+                        tr.appendChild(td);
+                    });
+                    
+                    tbody.appendChild(tr);
+                });
+            });
+        </script>
+    </body>
+</html>
